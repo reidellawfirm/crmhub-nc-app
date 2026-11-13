@@ -1,0 +1,247 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+/* Reidel CRM — Contacts integration styles (loaded into /apps/contacts) */
+
+/*
+ * Layout strategy
+ * ═══════════════
+ * contacts-integration.js injects #reidel-crm-panel as a sibling of
+ * .contact-details inside their shared parent container.  The JS immediately
+ * calls applyContainerLayout() which sets inline styles (with 'important'
+ * priority) directly on that parent element — so the layout is immune to
+ * class-name differences across NC Contacts versions.
+ *
+ * These CSS rules are a belt-and-suspenders backup for the JS styles.
+ * They use the universal `*:has()` selector so they match the actual parent
+ * regardless of what class name NC Contacts happens to give it.
+ */
+
+/* ── Mount root — the div Vue mounts into ───────────────────────── */
+#reidel-crm-panel {
+	display: block !important;
+	width: 100% !important;
+	max-width: 100% !important;
+	min-width: 0 !important;
+	box-sizing: border-box !important;
+	/* flex-shrink:0 keeps the panel from collapsing when siblings have flex:1 */
+	flex-shrink: 0 !important;
+	/* flex-basis:auto lets width:100% drive the size (not the main-axis) */
+	flex-basis: auto !important;
+	flex-grow: 0 !important;
+	align-self: stretch !important;
+	
+	/* Premium Aesthetics */
+	border-top: 1px solid var(--color-border, #e5e7eb) !important;
+	box-shadow: 0 -4px 20px rgba(0,0,0,0.04) !important;
+	background: var(--color-main-background, #fff) !important;
+	z-index: 10 !important;
+}
+
+/* ── Universal parent selector backup (Removed to prevent breaking sidebar) ── */
+
+/* ── CRM panel chrome ───────────────────────────────────────────── */
+.crm-panel {
+	width: 100%;
+	max-width: 100%;
+	box-sizing: border-box;
+	margin-top: 24px;
+}
+
+/* ── Match CRM App Gray Background ───────────────────────────────── */
+/* Set the Nextcloud Native Contacts right-pane background to gray 
+   so the white CRM cards pop perfectly just like the CRM App */
+.app-content-details {
+	background: #f3f4f6 !important;
+}
+
+/* ── Collapsible section (CrmSection.vue backup) ────────────────── */
+.crm-sec {
+	border-bottom: 1px solid var(--color-border, #f3f4f6);
+	background: var(--color-main-background, #fff);
+}
+
+.crm-sec__hdr {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	width: 100%;
+	padding: 14px 20px;
+	background: none;
+	border: none;
+	cursor: pointer;
+	text-align: left;
+	transition: background 0.15s;
+}
+
+.crm-sec__hdr:hover {
+	background: var(--color-background-hover, #f9fafb);
+}
+
+.crm-sec__title {
+	flex: 1;
+	font-size: 13px;
+	font-weight: 700;
+	letter-spacing: 0.25px;
+	color: var(--color-main-text, #111827);
+}
+
+.crm-sec__badge {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	min-width: 20px;
+	height: 20px;
+	padding: 0 6px;
+	border-radius: 10px;
+	font-size: 11px;
+	font-weight: 700;
+	background: var(--color-background-dark, #f0f0f0);
+	color: var(--color-text-lighter, #6b7280);
+}
+
+.crm-sec__badge--warn { background: rgba(239,68,68,0.12); color: #dc2626; }
+
+.crm-sec__chevron { width: 16px; height: 16px; flex-shrink: 0; position: relative; }
+.crm-sec__chevron::before,
+.crm-sec__chevron::after {
+	content: '';
+	position: absolute;
+	top: 50%;
+	width: 7px;
+	height: 2px;
+	background: var(--color-text-lighter, #9ca3af);
+	border-radius: 1px;
+	transition: transform 0.2s;
+}
+.crm-sec__chevron::before { left: 1px;  transform: translateY(-50%) rotate(-45deg); }
+.crm-sec__chevron::after  { right: 1px; transform: translateY(-50%) rotate(45deg); }
+.crm-sec__chevron--open::before { transform: translateY(-50%) rotate(45deg); }
+.crm-sec__chevron--open::after  { transform: translateY(-50%) rotate(-45deg); }
+
+.crm-sec__body { padding: 8px 20px 20px; }
+
+/* ── Dark mode ──────────────────────────────────────────────────── */
+@media (prefers-color-scheme: dark) {
+	.crm-panel__kpi      { background: rgba(255,255,255,0.04); }
+	.crm-panel__unlinked { background: rgba(255,255,255,0.04); }
+	.crm-sec__hdr:hover  { background: rgba(255,255,255,0.05); }
+}
+
+/* ── Responsive ─────────────────────────────────────────────────── */
+@media (max-width: 460px) {
+	.crm-panel__kpi { grid-template-columns: repeat(2, 1fr) !important; }
+}
+
+/* ── Native Nextcloud Contacts UI Overrides ─────────────────────── */
+/* Modernize the native inputs and labels */
+.app-content-details input[type="text"],
+.app-content-details input[type="email"],
+.app-content-details input[type="tel"],
+.app-content-details input:not([type]),
+.app-content-details textarea,
+.app-content-details .multiselect__tags,
+.contact-details input[type="text"],
+.contact-details input[type="email"],
+.contact-details input[type="tel"],
+.contact-details input:not([type]),
+.contact-details textarea,
+.contact-details .multiselect__tags {
+	border-radius: 8px !important;
+	border: 1px solid var(--color-border, #d1d5db) !important;
+	background-color: var(--color-background-hover, #f9fafb) !important;
+	padding: 10px 14px !important;
+	font-size: 14px !important;
+	transition: all 0.2s ease !important;
+	box-shadow: none !important;
+	min-height: 40px !important;
+}
+
+.app-content-details input:focus,
+.app-content-details textarea:focus,
+.app-content-details .multiselect--active .multiselect__tags,
+.contact-details input:focus,
+.contact-details textarea:focus,
+.contact-details .multiselect--active .multiselect__tags {
+	background-color: var(--color-main-background, #fff) !important;
+	border-color: var(--color-primary, #0082c9) !important;
+	box-shadow: 0 0 0 3px rgba(0, 130, 201, 0.15) !important;
+	outline: none !important;
+}
+
+/* Enhance typography and spacing of native property headers */
+.app-content-details .property__label,
+.app-content-details h2,
+.app-content-details h3,
+.contact-details .property__label,
+.contact-details h2,
+.contact-details h3 {
+	font-weight: 700 !important;
+	color: var(--color-main-text, #111827) !important;
+	font-size: 15px !important;
+	letter-spacing: 0.2px !important;
+}
+
+/* Overwrite Nextcloud's natively huge gaps between properties */
+.app-content-details .property,
+.contact-details .property {
+	margin-bottom: 12px !important;
+	padding-bottom: 0 !important;
+}
+
+/* Add a clean vertical gap between all inputs/rows universally */
+.app-content-details .property__row > .property__label,
+.app-content-details .property__row > .property__value,
+.contact-details .property__row > .property__label,
+.contact-details .property__row > .property__value {
+	margin-bottom: 12px !important;
+}
+
+/* Force stacked inputs (like Detailed Name parts) to separate */
+.app-content-details .property__value,
+.contact-details .property__value,
+.app-content-details .property__value > div,
+.contact-details .property__value > div {
+	display: flex !important;
+	flex-direction: column !important;
+	gap: 12px !important;
+}
+
+/* Fix Native Contacts Avatar Edit Button */
+/* Let Nextcloud handle the positioning natively, we just fix the background
+   and border radius that our generic button styles might have broken. */
+.app-content-details .contact-header-avatar .contact-header-avatar__menu,
+.app-content-details .contact-header__avatar .contact-header-avatar__menu,
+.contact-details .contact-header-avatar .contact-header-avatar__menu,
+.contact-details .contact-header__avatar .contact-header-avatar__menu {
+	background: transparent !important;
+	box-shadow: none !important;
+	border: none !important;
+}
+
+/* Style the actual button inside the wrapper to be a clean circle */
+.app-content-details .contact-header-avatar .contact-header-avatar__menu button,
+.app-content-details .contact-header__avatar .contact-header-avatar__menu button,
+.contact-details .contact-header-avatar .contact-header-avatar__menu button,
+.contact-details .contact-header__avatar .contact-header-avatar__menu button {
+	border-radius: 50% !important;
+	background-color: var(--color-main-background, #fff) !important;
+	box-shadow: 0 4px 12px rgba(0,0,0,0.15) !important;
+	border: 1px solid var(--color-border, #e5e7eb) !important;
+}
+
+/* Ensure inner icons render correctly */
+.contact-header-avatar__menu button svg,
+.contact-header-avatar__menu button .material-design-icon__svg {
+	fill: var(--color-main-text, #111827) !important;
+}
+
+/* Ensure the native details container uses full width and doesn't center-constrain */
+.app-content-details {
+	background-color: var(--color-main-background, #fff) !important;
+}
+.app-content-details > .contact-details,
+.app-content-details > .contact-details-wrapper {
+	max-width: 100% !important;
+	width: 100% !important;
+	margin: 0 !important;
+	padding: 24px 32px 40px !important;
+}

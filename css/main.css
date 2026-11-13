@@ -1,0 +1,18 @@
+.reidel-contacts-list,
+.reidel-contact-detail,
+.reidel-project-detail,
+.reidel-activity-feed {
+	padding: 8px 16px;
+}
+
+.reidel-contact-detail header h2,
+.reidel-project-detail header h2 {
+	margin: 0 0 4px 0;
+}
+
+
+.reidel-contact-detail .status,
+.reidel-project-detail .meta {
+	color: var(--color-text-maxcontrast);
+}
+ 
