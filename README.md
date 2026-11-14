@@ -1,8 +1,8 @@
 # Reidel CRM Hub
 
 **Version:** 0.2.1
-**Author:** Reidel (admin@raveng.it)
-**License:** AGPL
+**Author:** Schuyler "Rocky" Reidel, Reidel Law Firm (schuyler@reidellawfirm.com)
+**License:** GPL-3.0-or-later
 
 ## Project Overview
 
