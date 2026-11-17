@@ -1,6 +1,6 @@
 {
 	"name": "crmhub_nc_app",
-	"version": "0.1.0",
+	"version": "0.3.0",
 	"description": "Reidel CRM Hub - Nextcloud CRM",
 	"private": true,
 	"scripts": {

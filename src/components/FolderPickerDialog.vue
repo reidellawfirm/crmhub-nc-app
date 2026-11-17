@@ -160,23 +160,6 @@
 			</template>
 		</div>
 
-		<!-- Validation Error -->
-		<div v-if="validationError" class="rd-fp__validation-error">
-			<div class="rd-fp__validation-error-title">
-				<AlertCircleIcon :size="20" />
-				{{ t('crmhub_nc_app', 'Invalid Hugo Project') }}
-			</div>
-			<p>{{ t('crmhub_nc_app', 'The selected folder is not a valid Hugo project.') }}</p>
-			<p>{{ t('crmhub_nc_app', 'Please select a Hugo project that contains one of the following configuration files:') }}</p>
-			<ul>
-				<li>hugo.toml</li>
-				<li>config.toml</li>
-				<li>config.yaml</li>
-				<li>config.yml</li>
-				<li>config.json</li>
-			</ul>
-		</div>
-
 		<!-- â”€â”€ Selection preview bar â”€â”€ -->
 		<div class="rd-fp__preview" :class="{ 'rd-fp__preview--active': hasSelection }">
 			<template v-if="hasSelection">
@@ -190,10 +173,9 @@
 
 		<template #actions>
 			<NcButton @click="$emit('update:open', false)">{{ t('crmhub_nc_app', 'Cancel') }}</NcButton>
-			<NcButton type="primary" :disabled="!hasSelection || validating" @click="confirm">
+			<NcButton type="primary" :disabled="!hasSelection" @click="confirm">
 				<template #icon><FolderCheckOutlineIcon :size="16" /></template>
-				<template v-if="validating">{{ t('crmhub_nc_app', 'Validating...') }}</template>
-				<template v-else-if="multiSelect && selectedFolders.length > 1">{{ t('crmhub_nc_app', 'Select ' + selectedFolders.length + ' Folders') }}</template>
+				<template v-if="multiSelect && selectedFolders.length > 1">{{ t('crmhub_nc_app', 'Select ' + selectedFolders.length + ' Folders') }}</template>
 				<template v-else>{{ t('crmhub_nc_app', 'Select Folder') }}</template>
 			</NcButton>
 		</template>
@@ -247,9 +229,7 @@ export default {
 			error: null,
 			searchQuery: '',
 			dateFilter: 'all',
-			validating: false,
-			validationError: false,
-			theme: localStorage.getItem('hugo-theme') || 'auto',
+			theme: localStorage.getItem('crm-theme') || 'auto',
 			systemIsDark: window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
 		}
 	},
@@ -327,16 +307,16 @@ export default {
 			immediate: true,
 			handler(isDark) {
 				if (this.open) {
-					document.body.setAttribute('data-hugo-theme', isDark ? 'dark' : 'light');
+					document.body.setAttribute('data-crm-theme', isDark ? 'dark' : 'light');
 				}
 			}
 		},
 		open(val) {
 			if (val) {
 				this.reset()
-				document.body.setAttribute('data-hugo-theme', this.isDarkMode ? 'dark' : 'light');
+				document.body.setAttribute('data-crm-theme', this.isDarkMode ? 'dark' : 'light');
 			} else {
-				document.body.removeAttribute('data-hugo-theme');
+				document.body.removeAttribute('data-crm-theme');
 			}
 		},
 	},
@@ -354,12 +334,12 @@ export default {
 		if (window.matchMedia && this.mediaQueryListener) {
 			window.matchMedia('(prefers-color-scheme: dark)').removeEventListener('change', this.mediaQueryListener);
 		}
-		document.body.removeAttribute('data-hugo-theme');
+		document.body.removeAttribute('data-crm-theme');
 	},
 	methods: {
 		t,
 		handleStorageEvent(e) {
-			if (e.key === 'hugo-theme') {
+			if (e.key === 'crm-theme') {
 				this.theme = e.newValue || 'auto';
 			}
 		},
@@ -371,8 +351,6 @@ export default {
 			this.selectedNodeId = null
 			this.selectedFolders = []
 			this.error = null
-			this.validating = false
-			this.validationError = false
 			
 			if (this.initialPath) {
 				const path = this.initialPath.replace(/^\//, '')
@@ -530,7 +508,6 @@ export default {
 
 		/** Select a child folder from the list. */
 		selectFolder(folder) {
-			this.validationError = false;
 			if (this.multiSelect) {
 				const idx = this.selectedFolders.findIndex(f => f.path === folder.path);
 				if (idx > -1) {
@@ -544,89 +521,24 @@ export default {
 			}
 		},
 
-		async validateHugoFolder(path) {
-			try {
-				const body = `<?xml version="1.0" encoding="utf-8"?>
-<D:propfind xmlns:D="DAV:" xmlns:oc="http://owncloud.org/ns">
-  <D:prop>
-    <D:displayname/>
-    <D:resourcetype/>
-  </D:prop>
-</D:propfind>`
-				const resp = await axios({
-					method: 'PROPFIND',
-					url: this.davUrl(path),
-					data: body,
-					headers: { 'Content-Type': 'application/xml', Depth: '1' },
-				})
-				
-				const doc = new DOMParser().parseFromString(resp.data, 'application/xml')
-				const DAV = 'DAV:'
-				const validFiles = ['hugo.toml', 'config.toml', 'config.yaml', 'config.yml', 'config.json']
-				
-				for (const response of doc.getElementsByTagNameNS(DAV, 'response')) {
-					const nameNode = response.getElementsByTagNameNS(DAV, 'displayname')[0]
-					if (nameNode) {
-						const name = nameNode.textContent.trim()
-						if (validFiles.includes(name)) {
-							const rt = response.getElementsByTagNameNS(DAV, 'resourcetype')[0]
-							const isDir = rt && rt.getElementsByTagNameNS(DAV, 'collection').length > 0
-							if (!isDir) {
-								return true
-							}
-						}
-					}
-				}
-				return false
-			} catch (err) {
-				console.error('Validation error', err)
-				return false
-			}
-		},
-
-		async confirm() {
-			if (!this.hasSelection || this.validating) return
-			
-			this.validating = true
-			this.validationError = false
-			
-			try {
-				if (this.multiSelect) {
-					for (const folder of this.selectedFolders) {
-						const isValid = await this.validateHugoFolder(folder.path)
-						if (!isValid) {
-							this.validationError = true
-							this.selectedFolders = []
-							return
-						}
-					}
-					
-					const mapped = this.selectedFolders.map(f => ({
-						path: '/' + f.path,
-						nodeId: f.nodeId,
-						name: f.name
-					}))
-					this.$emit('select', mapped)
-				} else {
-					const isValid = await this.validateHugoFolder(this.selectedPath)
-					if (!isValid) {
-						this.validationError = true
-						this.selectedPath = ''
-						this.selectedNodeId = null
-						return
-					}
-					
-					this.$emit('select', {
-						path: '/' + this.selectedPath,
-						nodeId: this.selectedNodeId,
-						name: this.selectedPath.split('/').pop() || ''
-					})
-				}
-				this.$emit('update:open', false)
-			} finally {
-				this.validating = false
-			}
-		},
+        confirm() {
+            if (!this.hasSelection) return
+            if (this.multiSelect) {
+                const mapped = this.selectedFolders.map(f => ({
+                    path: '/' + f.path,
+                    nodeId: f.nodeId,
+                    name: f.name
+                }))
+                this.$emit('select', mapped)
+            } else {
+                this.$emit('select', {
+                    path: '/' + this.selectedPath,
+                    nodeId: this.selectedNodeId,
+                    name: this.selectedPath.split('/').pop() || ''
+                })
+            }
+            this.$emit('update:open', false)
+        },
 	},
 }
 </script>
@@ -1036,7 +948,7 @@ export default {
 
 <style>
 /* Force Light Theme Overrides on NcDialog via Global Attribute */
-body[data-hugo-theme="light"] .modal-wrapper .modal-container {
+body[data-crm-theme="light"] .modal-wrapper .modal-container {
 	background-color: #ffffff !important;
 	color: #111827 !important;
 	color-scheme: light !important;
@@ -1050,80 +962,80 @@ body[data-hugo-theme="light"] .modal-wrapper .modal-container {
 	--color-background-hover: #f3f4f6 !important;
 	--color-background-dark: #f9fafb !important;
 }
-body[data-hugo-theme="light"] .modal-wrapper .modal-container .modal-header {
+body[data-crm-theme="light"] .modal-wrapper .modal-container .modal-header {
 	background-color: #ffffff !important;
 	color: #111827 !important;
 	border-bottom-color: #e5e7eb !important;
 }
-body[data-hugo-theme="light"] .modal-wrapper .modal-container .modal-header h2,
-body[data-hugo-theme="light"] .modal-wrapper .modal-container .modal-header .modal-title {
+body[data-crm-theme="light"] .modal-wrapper .modal-container .modal-header h2,
+body[data-crm-theme="light"] .modal-wrapper .modal-container .modal-header .modal-title {
 	color: #111827 !important;
 }
-body[data-hugo-theme="light"] .modal-wrapper .modal-container button.modal-header__close {
+body[data-crm-theme="light"] .modal-wrapper .modal-container button.modal-header__close {
 	filter: none !important;
 }
-body[data-hugo-theme="light"] .rd-fp__crumb { background: #f9fafb !important; border-color: #e5e7eb !important; }
-body[data-hugo-theme="light"] .rd-fp__crumb-seg { color: #0082c9 !important; background-color: transparent !important; border: none !important; box-shadow: none !important; }
-body[data-hugo-theme="light"] .rd-fp__crumb-seg--last { color: #111827 !important; }
-body[data-hugo-theme="light"] .rd-fp__search-input, body[data-hugo-theme="light"] .rd-fp__select { background: #ffffff !important; border-color: #d1d5db !important; color: #111827 !important; }
-body[data-hugo-theme="light"] .rd-fp__search-input:focus, body[data-hugo-theme="light"] .rd-fp__select:focus { outline: none !important; border-color: #111827 !important; box-shadow: 0 0 0 2px rgba(17, 24, 39, 0.1) !important; }
-body[data-hugo-theme="light"]:not(.using-mouse) .rd-fp__search-input:focus, body[data-hugo-theme="light"]:not(.using-mouse) .rd-fp__select:focus { outline: 2px solid #111827 !important; outline-offset: 0px !important; box-shadow: none !important; }
-body[data-hugo-theme="light"] .rd-fp__item-name { color: #111827 !important; }
-body[data-hugo-theme="light"] .rd-fp__search-input::placeholder { color: #9ca3af !important; }
-body[data-hugo-theme="light"] .rd-fp__item-badge { background-color: #f3f4f6 !important; color: #9ca3af !important; }
-body[data-hugo-theme="light"] .rd-fp__item--disabled .rd-fp__item-name { color: #9ca3af !important; }
-body[data-hugo-theme="light"] .rd-fp__item--disabled .rd-fp__item-radio { background-color: #f3f4f6 !important; border-color: #e5e7eb !important; }
-body[data-hugo-theme="light"] .rd-fp__item-icon { color: #6b7280 !important; }
-body[data-hugo-theme="light"] .rd-fp__item-icon--sel { color: #0082c9 !important; }
-body[data-hugo-theme="light"] .rd-fp__item:hover { background: #f3f4f6 !important; }
-body[data-hugo-theme="light"] .rd-fp__item--sel { background: #e6f3fb !important; }
-body[data-hugo-theme="light"] .rd-fp__item-radio { border-color: #d1d5db !important; }
-body[data-hugo-theme="light"] .rd-fp__item--sel .rd-fp__item-radio { border-color: #0082c9 !important; background: #0082c9 !important; }
-body[data-hugo-theme="light"] .rd-fp__item-open { color: #6b7280 !important; border-color: #e5e7eb !important; }
-body[data-hugo-theme="light"] .rd-fp__item-open:hover { color: #0082c9 !important; border-color: #0082c9 !important; background: #e6f3fb !important; }
-body[data-hugo-theme="light"] .rd-fp__item-open:focus-visible { background-color: transparent !important; outline: 2px solid #111827 !important; outline-offset: 0px !important; box-shadow: none !important; }
-body[data-hugo-theme="light"] .rd-fp__scroll { border-color: #e5e7eb !important; }
-body[data-hugo-theme="light"] .rd-fp__use-section { background: #e6f3fb !important; border-color: #0082c9 !important; }
-body[data-hugo-theme="light"] .rd-fp__use-label { color: #6b7280 !important; }
-body[data-hugo-theme="light"] .rd-fp__use-path { color: #0082c9 !important; }
-body[data-hugo-theme="light"] .rd-fp__preview { background: #f9fafb !important; border-color: #e5e7eb !important; }
-body[data-hugo-theme="light"] .rd-fp__preview-label { color: #6b7280 !important; }
+body[data-crm-theme="light"] .rd-fp__crumb { background: #f9fafb !important; border-color: #e5e7eb !important; }
+body[data-crm-theme="light"] .rd-fp__crumb-seg { color: #0082c9 !important; background-color: transparent !important; border: none !important; box-shadow: none !important; }
+body[data-crm-theme="light"] .rd-fp__crumb-seg--last { color: #111827 !important; }
+body[data-crm-theme="light"] .rd-fp__search-input, body[data-crm-theme="light"] .rd-fp__select { background: #ffffff !important; border-color: #d1d5db !important; color: #111827 !important; }
+body[data-crm-theme="light"] .rd-fp__search-input:focus, body[data-crm-theme="light"] .rd-fp__select:focus { outline: none !important; border-color: #111827 !important; box-shadow: 0 0 0 2px rgba(17, 24, 39, 0.1) !important; }
+body[data-crm-theme="light"]:not(.using-mouse) .rd-fp__search-input:focus, body[data-crm-theme="light"]:not(.using-mouse) .rd-fp__select:focus { outline: 2px solid #111827 !important; outline-offset: 0px !important; box-shadow: none !important; }
+body[data-crm-theme="light"] .rd-fp__item-name { color: #111827 !important; }
+body[data-crm-theme="light"] .rd-fp__search-input::placeholder { color: #9ca3af !important; }
+body[data-crm-theme="light"] .rd-fp__item-badge { background-color: #f3f4f6 !important; color: #9ca3af !important; }
+body[data-crm-theme="light"] .rd-fp__item--disabled .rd-fp__item-name { color: #9ca3af !important; }
+body[data-crm-theme="light"] .rd-fp__item--disabled .rd-fp__item-radio { background-color: #f3f4f6 !important; border-color: #e5e7eb !important; }
+body[data-crm-theme="light"] .rd-fp__item-icon { color: #6b7280 !important; }
+body[data-crm-theme="light"] .rd-fp__item-icon--sel { color: #0082c9 !important; }
+body[data-crm-theme="light"] .rd-fp__item:hover { background: #f3f4f6 !important; }
+body[data-crm-theme="light"] .rd-fp__item--sel { background: #e6f3fb !important; }
+body[data-crm-theme="light"] .rd-fp__item-radio { border-color: #d1d5db !important; }
+body[data-crm-theme="light"] .rd-fp__item--sel .rd-fp__item-radio { border-color: #0082c9 !important; background: #0082c9 !important; }
+body[data-crm-theme="light"] .rd-fp__item-open { color: #6b7280 !important; border-color: #e5e7eb !important; }
+body[data-crm-theme="light"] .rd-fp__item-open:hover { color: #0082c9 !important; border-color: #0082c9 !important; background: #e6f3fb !important; }
+body[data-crm-theme="light"] .rd-fp__item-open:focus-visible { background-color: transparent !important; outline: 2px solid #111827 !important; outline-offset: 0px !important; box-shadow: none !important; }
+body[data-crm-theme="light"] .rd-fp__scroll { border-color: #e5e7eb !important; }
+body[data-crm-theme="light"] .rd-fp__use-section { background: #e6f3fb !important; border-color: #0082c9 !important; }
+body[data-crm-theme="light"] .rd-fp__use-label { color: #6b7280 !important; }
+body[data-crm-theme="light"] .rd-fp__use-path { color: #0082c9 !important; }
+body[data-crm-theme="light"] .rd-fp__preview { background: #f9fafb !important; border-color: #e5e7eb !important; }
+body[data-crm-theme="light"] .rd-fp__preview-label { color: #6b7280 !important; }
 
 /* Force Nextcloud Buttons explicitly in Light Mode */
-body[data-hugo-theme="light"] .modal-wrapper .modal-container .button-vue {
+body[data-crm-theme="light"] .modal-wrapper .modal-container .button-vue {
 	background-color: #ffffff !important;
 	color: #111827 !important;
 	border-color: #d1d5db !important;
 }
-body[data-hugo-theme="light"] .modal-wrapper .modal-container .button-vue:hover:not(:disabled) {
+body[data-crm-theme="light"] .modal-wrapper .modal-container .button-vue:hover:not(:disabled) {
 	background-color: #f3f4f6 !important;
 }
-body[data-hugo-theme="light"] .modal-wrapper .modal-container .button-vue.button-vue--vue-primary {
+body[data-crm-theme="light"] .modal-wrapper .modal-container .button-vue.button-vue--vue-primary {
 	background-color: #0082c9 !important;
 	color: #ffffff !important;
 	border-color: #0082c9 !important;
 }
-body[data-hugo-theme="light"] .modal-wrapper .modal-container .button-vue.button-vue--vue-primary:hover:not(:disabled) {
+body[data-crm-theme="light"] .modal-wrapper .modal-container .button-vue.button-vue--vue-primary:hover:not(:disabled) {
 	background-color: #006bb3 !important;
 }
-body[data-hugo-theme="light"] .modal-wrapper .modal-container .button-vue:disabled {
+body[data-crm-theme="light"] .modal-wrapper .modal-container .button-vue:disabled {
 	background-color: #f9fafb !important;
 	color: #9ca3af !important;
 	border-color: #e5e7eb !important;
 	opacity: 0.6 !important;
 }
 /* Ensure the custom checkbox isn't overridden by NC dark mode */
-body[data-hugo-theme="light"] .modal-wrapper .modal-container .rd-fp__item-radio {
+body[data-crm-theme="light"] .modal-wrapper .modal-container .rd-fp__item-radio {
 	background-color: #ffffff !important;
 	border-color: #d1d5db !important;
 }
-body[data-hugo-theme="light"] .modal-wrapper .modal-container .rd-fp__item--sel .rd-fp__item-radio {
+body[data-crm-theme="light"] .modal-wrapper .modal-container .rd-fp__item--sel .rd-fp__item-radio {
 	background-color: #0082c9 !important;
 	border-color: #0082c9 !important;
 }
 
 /* Force Dark Theme Overrides on NcDialog via Global Attribute */
-body[data-hugo-theme="dark"] .modal-wrapper .modal-container {
+body[data-crm-theme="dark"] .modal-wrapper .modal-container {
 	background-color: #111827 !important;
 	color: #f9fafb !important;
 	color-scheme: dark !important;
@@ -1137,83 +1049,83 @@ body[data-hugo-theme="dark"] .modal-wrapper .modal-container {
 	--color-background-hover: #1f2937 !important;
 	--color-background-dark: #111827 !important;
 }
-body[data-hugo-theme="dark"] .modal-wrapper .modal-container p {
+body[data-crm-theme="dark"] .modal-wrapper .modal-container p {
 	color: #d1d5db !important;
 }
-body[data-hugo-theme="dark"] .modal-wrapper .modal-container .modal-header {
+body[data-crm-theme="dark"] .modal-wrapper .modal-container .modal-header {
 	background-color: #111827 !important;
 	color: #f9fafb !important;
 	border-bottom-color: #374151 !important;
 }
-body[data-hugo-theme="dark"] .modal-wrapper .modal-container .modal-header h2,
-body[data-hugo-theme="dark"] .modal-wrapper .modal-container .modal-header .modal-title {
+body[data-crm-theme="dark"] .modal-wrapper .modal-container .modal-header h2,
+body[data-crm-theme="dark"] .modal-wrapper .modal-container .modal-header .modal-title {
 	color: #f9fafb !important;
 }
-body[data-hugo-theme="dark"] .modal-wrapper .modal-container button.modal-header__close {
+body[data-crm-theme="dark"] .modal-wrapper .modal-container button.modal-header__close {
 	filter: invert(1) !important;
 }
-body[data-hugo-theme="dark"] .rd-fp__crumb { background: #1f2937 !important; border-color: #374151 !important; }
-body[data-hugo-theme="dark"] .rd-fp__crumb-seg { color: #38bdf8 !important; background-color: transparent !important; border: none !important; box-shadow: none !important; }
-body[data-hugo-theme="dark"] .rd-fp__crumb-seg--last { color: #f9fafb !important; }
-body[data-hugo-theme="dark"] .rd-fp__crumb-arrow { color: #9ca3af !important; }
-body[data-hugo-theme="dark"] .rd-fp__search-input, body[data-hugo-theme="dark"] .rd-fp__select { background: #111827 !important; border-color: #374151 !important; color: #f9fafb !important; }
-body[data-hugo-theme="dark"] .rd-fp__search-input:focus, body[data-hugo-theme="dark"] .rd-fp__select:focus { outline: none !important; border-color: #f9fafb !important; box-shadow: 0 0 0 2px rgba(249, 250, 251, 0.1) !important; }
-body[data-hugo-theme="dark"]:not(.using-mouse) .rd-fp__search-input:focus, body[data-hugo-theme="dark"]:not(.using-mouse) .rd-fp__select:focus { outline: 2px solid #f9fafb !important; outline-offset: 0px !important; box-shadow: none !important; }
-body[data-hugo-theme="dark"] .rd-fp__search-input::placeholder { color: #9ca3af !important; }
-body[data-hugo-theme="dark"] .rd-fp__item { border-bottom-color: #374151 !important; }
-body[data-hugo-theme="dark"] .rd-fp__item-name { color: #f9fafb !important; }
-body[data-hugo-theme="dark"] .rd-fp__item-badge { background-color: #374151 !important; color: #d1d5db !important; }
-body[data-hugo-theme="dark"] .rd-fp__item--disabled .rd-fp__item-name { color: #9ca3af !important; }
-body[data-hugo-theme="dark"] .rd-fp__item--disabled .rd-fp__item-radio { background-color: #374151 !important; border-color: #4b5563 !important; }
-body[data-hugo-theme="dark"] .rd-fp__item-icon { color: #9ca3af !important; }
-body[data-hugo-theme="dark"] .rd-fp__item-icon--sel { color: #38bdf8 !important; }
-body[data-hugo-theme="dark"] .rd-fp__item:hover { background: #374151 !important; }
-body[data-hugo-theme="dark"] .rd-fp__item--sel { background: #1e3a8a !important; }
-body[data-hugo-theme="dark"] .rd-fp__item-radio { border-color: #4b5563 !important; }
-body[data-hugo-theme="dark"] .rd-fp__item--sel .rd-fp__item-radio { border-color: #38bdf8 !important; background: #38bdf8 !important; }
-body[data-hugo-theme="dark"] .rd-fp__item-open { color: #9ca3af !important; border-color: #374151 !important; }
-body[data-hugo-theme="dark"] .rd-fp__item-open:hover { color: #38bdf8 !important; border-color: #38bdf8 !important; background: #1e3a8a !important; }
-body[data-hugo-theme="dark"] .rd-fp__item-open:focus-visible { background-color: transparent !important; outline: 2px solid #f9fafb !important; outline-offset: 0px !important; box-shadow: none !important; }
-body[data-hugo-theme="dark"] .rd-fp__scroll { border-color: #374151 !important; }
-body[data-hugo-theme="dark"] .rd-fp__use-section { background: #1f2937 !important; border-color: #374151 !important; }
-body[data-hugo-theme="dark"] .rd-fp__use-section--chosen { border-color: #38bdf8 !important; background: #1e3a8a !important; }
-body[data-hugo-theme="dark"] .rd-fp__use-label { color: #9ca3af !important; }
-body[data-hugo-theme="dark"] .rd-fp__use-path { color: #38bdf8 !important; }
-body[data-hugo-theme="dark"] .rd-fp__subfolder-hdr { color: #9ca3af !important; }
-body[data-hugo-theme="dark"] .rd-fp__preview { background: #1f2937 !important; border-color: #374151 !important; }
-body[data-hugo-theme="dark"] .rd-fp__preview-label { color: #9ca3af !important; }
-body[data-hugo-theme="dark"] .rd-fp__preview-path { color: #38bdf8 !important; }
-body[data-hugo-theme="dark"] .rd-fp__preview-icon { color: #38bdf8 !important; }
+body[data-crm-theme="dark"] .rd-fp__crumb { background: #1f2937 !important; border-color: #374151 !important; }
+body[data-crm-theme="dark"] .rd-fp__crumb-seg { color: #38bdf8 !important; background-color: transparent !important; border: none !important; box-shadow: none !important; }
+body[data-crm-theme="dark"] .rd-fp__crumb-seg--last { color: #f9fafb !important; }
+body[data-crm-theme="dark"] .rd-fp__crumb-arrow { color: #9ca3af !important; }
+body[data-crm-theme="dark"] .rd-fp__search-input, body[data-crm-theme="dark"] .rd-fp__select { background: #111827 !important; border-color: #374151 !important; color: #f9fafb !important; }
+body[data-crm-theme="dark"] .rd-fp__search-input:focus, body[data-crm-theme="dark"] .rd-fp__select:focus { outline: none !important; border-color: #f9fafb !important; box-shadow: 0 0 0 2px rgba(249, 250, 251, 0.1) !important; }
+body[data-crm-theme="dark"]:not(.using-mouse) .rd-fp__search-input:focus, body[data-crm-theme="dark"]:not(.using-mouse) .rd-fp__select:focus { outline: 2px solid #f9fafb !important; outline-offset: 0px !important; box-shadow: none !important; }
+body[data-crm-theme="dark"] .rd-fp__search-input::placeholder { color: #9ca3af !important; }
+body[data-crm-theme="dark"] .rd-fp__item { border-bottom-color: #374151 !important; }
+body[data-crm-theme="dark"] .rd-fp__item-name { color: #f9fafb !important; }
+body[data-crm-theme="dark"] .rd-fp__item-badge { background-color: #374151 !important; color: #d1d5db !important; }
+body[data-crm-theme="dark"] .rd-fp__item--disabled .rd-fp__item-name { color: #9ca3af !important; }
+body[data-crm-theme="dark"] .rd-fp__item--disabled .rd-fp__item-radio { background-color: #374151 !important; border-color: #4b5563 !important; }
+body[data-crm-theme="dark"] .rd-fp__item-icon { color: #9ca3af !important; }
+body[data-crm-theme="dark"] .rd-fp__item-icon--sel { color: #38bdf8 !important; }
+body[data-crm-theme="dark"] .rd-fp__item:hover { background: #374151 !important; }
+body[data-crm-theme="dark"] .rd-fp__item--sel { background: #1e3a8a !important; }
+body[data-crm-theme="dark"] .rd-fp__item-radio { border-color: #4b5563 !important; }
+body[data-crm-theme="dark"] .rd-fp__item--sel .rd-fp__item-radio { border-color: #38bdf8 !important; background: #38bdf8 !important; }
+body[data-crm-theme="dark"] .rd-fp__item-open { color: #9ca3af !important; border-color: #374151 !important; }
+body[data-crm-theme="dark"] .rd-fp__item-open:hover { color: #38bdf8 !important; border-color: #38bdf8 !important; background: #1e3a8a !important; }
+body[data-crm-theme="dark"] .rd-fp__item-open:focus-visible { background-color: transparent !important; outline: 2px solid #f9fafb !important; outline-offset: 0px !important; box-shadow: none !important; }
+body[data-crm-theme="dark"] .rd-fp__scroll { border-color: #374151 !important; }
+body[data-crm-theme="dark"] .rd-fp__use-section { background: #1f2937 !important; border-color: #374151 !important; }
+body[data-crm-theme="dark"] .rd-fp__use-section--chosen { border-color: #38bdf8 !important; background: #1e3a8a !important; }
+body[data-crm-theme="dark"] .rd-fp__use-label { color: #9ca3af !important; }
+body[data-crm-theme="dark"] .rd-fp__use-path { color: #38bdf8 !important; }
+body[data-crm-theme="dark"] .rd-fp__subfolder-hdr { color: #9ca3af !important; }
+body[data-crm-theme="dark"] .rd-fp__preview { background: #1f2937 !important; border-color: #374151 !important; }
+body[data-crm-theme="dark"] .rd-fp__preview-label { color: #9ca3af !important; }
+body[data-crm-theme="dark"] .rd-fp__preview-path { color: #38bdf8 !important; }
+body[data-crm-theme="dark"] .rd-fp__preview-icon { color: #38bdf8 !important; }
 
 /* Force Nextcloud Buttons explicitly in Dark Mode */
-body[data-hugo-theme="dark"] .modal-wrapper .modal-container .button-vue {
+body[data-crm-theme="dark"] .modal-wrapper .modal-container .button-vue {
 	background-color: #1f2937 !important;
 	color: #f9fafb !important;
 	border-color: #374151 !important;
 }
-body[data-hugo-theme="dark"] .modal-wrapper .modal-container .button-vue:hover:not(:disabled) {
+body[data-crm-theme="dark"] .modal-wrapper .modal-container .button-vue:hover:not(:disabled) {
 	background-color: #374151 !important;
 }
-body[data-hugo-theme="dark"] .modal-wrapper .modal-container .button-vue.button-vue--vue-primary {
+body[data-crm-theme="dark"] .modal-wrapper .modal-container .button-vue.button-vue--vue-primary {
 	background-color: #38bdf8 !important;
 	color: #111827 !important;
 	border-color: #38bdf8 !important;
 }
-body[data-hugo-theme="dark"] .modal-wrapper .modal-container .button-vue.button-vue--vue-primary:hover:not(:disabled) {
+body[data-crm-theme="dark"] .modal-wrapper .modal-container .button-vue.button-vue--vue-primary:hover:not(:disabled) {
 	background-color: #0ea5e9 !important;
 }
-body[data-hugo-theme="dark"] .modal-wrapper .modal-container .button-vue:disabled {
+body[data-crm-theme="dark"] .modal-wrapper .modal-container .button-vue:disabled {
 	background-color: #374151 !important;
 	color: #9ca3af !important;
 	border-color: #4b5563 !important;
 	opacity: 0.6 !important;
 }
 /* Ensure the custom checkbox isn't overridden by NC light mode */
-body[data-hugo-theme="dark"] .modal-wrapper .modal-container .rd-fp__item-radio {
+body[data-crm-theme="dark"] .modal-wrapper .modal-container .rd-fp__item-radio {
 	background-color: #111827 !important;
 	border-color: #4b5563 !important;
 }
-body[data-hugo-theme="dark"] .modal-wrapper .modal-container .rd-fp__item--sel .rd-fp__item-radio {
+body[data-crm-theme="dark"] .modal-wrapper .modal-container .rd-fp__item--sel .rd-fp__item-radio {
 	background-color: #38bdf8 !important;
 	border-color: #38bdf8 !important;
 }

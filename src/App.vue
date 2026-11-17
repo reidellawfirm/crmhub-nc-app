@@ -1,6 +1,6 @@
 <template>
 	<NcContent app-name="crmhub_nc_app">
-		<NcAppNavigation v-if="!isHugoRoute">
+		<NcAppNavigation>
 			<Sidebar />
 		</NcAppNavigation>
 		<NcAppContent>
@@ -19,12 +19,7 @@ import Sidebar from './components/Sidebar.vue'
 
 export default {
 	name: 'App',
-	components: { NcContent, NcAppNavigation, NcAppContent, Sidebar },
-	computed: {
-		isHugoRoute() {
-			return this.$route.path.startsWith('/hugo')
-		}
-	}
+	components: { NcContent, NcAppNavigation, NcAppContent, Sidebar }
 }
 </script>
 

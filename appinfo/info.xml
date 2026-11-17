@@ -10,7 +10,7 @@ It maintains a local cache of contact records linked to Nextcloud Contacts vCard
 
 Heavy email/funnel automation is offloaded to Windmill via a small REST surface; a Groundhogg importer keeps existing CRM contacts in sync.
 	]]></description>
-	<version>0.2.2</version>
+	<version>0.3.0</version>
 	<licence>GPL-3.0-or-later</licence>
     <author mail="schuyler@reidellawfirm.com">Schuyler "Rocky" Reidel, Reidel Law Firm</author>
 	<namespace>ReidelCrm</namespace>
@@ -26,8 +26,8 @@ Heavy email/funnel automation is offloaded to Windmill via a small REST surface;
 
 	<navigations>
 		<navigation>
-			<name>Hugo Preview App</name>
-			<route>crmhub_nc_app.page.hugo</route>
+			<name>Reidel CRM Hub</name>
+			<route>crmhub_nc_app.page.index</route>
 			<order>100</order>
 		</navigation>
 	</navigations>

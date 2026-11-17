@@ -6,7 +6,6 @@ webpackConfig.entry = {
 	adminSettings: path.join(__dirname, 'src', 'adminSettings.js'),
 	dashboard: path.join(__dirname, 'src', 'dashboard.js'),
 	'contacts-integration': path.join(__dirname, 'src', 'contacts-integration.js'),
-	'files-integration': path.join(__dirname, 'src', 'files-integration.js'),
 }
 
 webpackConfig.module = webpackConfig.module || { rules: [] }

@@ -1,39 +1,42 @@
 # Reidel CRM Hub
 
-**Version:** 0.2.1
+**Version:** 0.3.0
 **Author:** Schuyler "Rocky" Reidel, Reidel Law Firm (schuyler@reidellawfirm.com)
 **License:** GPL-3.0-or-later
 
-## Project Overview
-
-Reidel CRM Hub is a lightweight CRM application designed to integrate deeply with Nextcloud. Instead of acting as a standalone application, it turns Nextcloud into a relational CRM for client and project work by seamlessly linking existing Nextcloud apps (Contacts, Files, Deck, Mail, and Activity) into a unified client record.
+Reidel CRM Hub is a lightweight CRM for Nextcloud. It links Contacts, Files, Deck, Mail, and Activity into unified client and project records without replacing those apps.
 
 ## Main Features
 
-- **Unified Client Records:** Maintains a local cache of contact records linked to Nextcloud Contacts vCards.
-- **Project Workspaces:** Attaches projects directly to a contact, linking a specific case folder in Nextcloud Files and a project board in Nextcloud Deck.
-- **Hugo Preview Integration:** Fully integrated Hugo Static Site Generator preview tool. Pick a folder from Nextcloud Files containing markdown and attachments, and dynamically build, preview, and serve a Hugo static site within the CRM!
-- **Activity Timeline:** Records a unified activity timeline and exposes a Dashboard widget for at-a-glance reviews of CRM activities.
-- **Third-Party Automations:** Offloads heavy email/funnel automation to Windmill via a lightweight REST API surface.
-- **Groundhogg Import:** Keeps existing CRM contacts in sync with Groundhogg.
-- **Modern UI:** Features a sleek Vue 3 interface matching the Nextcloud 28+ design system, with dark mode support and keyboard accessibility.
+- **Unified Client Records:** Local contact records linked to Nextcloud Contacts vCards.
+- **Project Workspaces:** Projects attached to contacts, with case folders in Files and cards in Deck.
+- **Activity Timeline:** A unified activity feed plus a Nextcloud Dashboard widget.
+- **Tasks and Notes:** Contact- and project-scoped work items and notes.
+- **Reports and Exports:** CRM analytics and CSV exports.
+- **Automation:** Windmill REST integration and Groundhogg contact synchronization.
+- **Nextcloud Integration:** Contacts panels, unified search, notifications, and file/Deck/Mail activity hooks.
 
-## Application Workflow
+## Requirements
 
-1. **Contacts:** Users manage their clients via the standard Nextcloud Contacts interface or the CRM Hub dashboard.
-2. **Projects:** Each client can have associated projects. A project has a dedicated folder in the Nextcloud Files app.
-3. **Hugo Previews (Websites):** 
-   - A user navigates to the **Hugo Preview** app (or uses the sidebar integration in Nextcloud Files).
-   - They map an existing Nextcloud folder to a Hugo Project.
-   - When the user triggers a build, the app dynamically parses the folder's markdown, resolves Nextcloud attachment links, and executes the `hugo` binary.
-   - The compiled static site is served securely via an internal Nextcloud route.
-4. **Deletions & Cleanups:** When a project is removed or deleted in the Nextcloud virtual file system, background hooks automatically clean up the built artifacts.
+- Nextcloud 34 or 35.
+- PHP 8.1 or later.
+- Nextcloud Contacts is recommended; Files, Deck, Mail, Calendar, Windmill, and Groundhogg integrations are optional.
 
-## Repository Structure & Development
+## Installation
 
-This repository contains everything needed for both running the app in production and for future maintenance.
+Install the app archive into `apps/` or `custom_apps/`, then enable **Reidel CRM Hub** in Nextcloud Apps. The app icon opens the CRM overview at `/apps/crmhub_nc_app/`.
 
-- **Runtime Files**: The core Nextcloud PHP backend (`lib/`, `appinfo/`, `templates/`) and the compiled frontend assets (`js/`, `css/`). These are the only files actively executed or served by Nextcloud in production.
-- **Development Source Files**: Files such as the `src/` directory (Vue.js frontend source), `package.json`, and `webpack.config.js`. While these are **not required for runtime**, they are intentionally preserved in the repository so your IT team can maintain, debug, or extend the frontend application in the future.
+## Hugo Preview separation
 
-For detailed setup instructions, please see [INSTALLATION.md](INSTALLATION.md).
+Hugo Preview is no longer bundled with CRM Hub as of version 0.3.0. It is now the independent `hugopreview_nc_app` application, maintained at `https://github.com/reidellawfirm/hugopreview-nc-app`.
+
+If you use Hugo Preview, install that app before upgrading CRM Hub. Existing Hugo project configuration is not automatically migrated; back up CRM Hub's legacy `projects` application configuration key and recreate the project list in Hugo Preview. Rebuild previews from the original Nextcloud folders after installing the standalone app.
+
+## Development
+
+```bash
+npm ci --legacy-peer-deps
+npm run build
+```
+
+The app ID is `crmhub_nc_app`. The public repository is `https://github.com/reidellawfirm/crmhub-nc-app`.

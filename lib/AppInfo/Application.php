@@ -70,7 +70,6 @@ class Application extends App implements IBootstrap {
 		// Files events: keep folder_path in sync, null FK on delete, log uploads
 		$context->registerEventListener(NodeRenamedEvent::class, NodeRenamedListener::class);
 		$context->registerEventListener(NodeDeletedEvent::class, NodeDeletedListener::class);
-		$context->registerEventListener(NodeDeletedEvent::class, \OCA\ReidelCrm\Listener\HugoNodeDeletedListener::class);
 		$context->registerEventListener(NodeWrittenEvent::class, NodeWrittenListener::class);
 		$context->registerEventListener(NodeCopiedEvent::class, NodeCopiedListener::class);
 
@@ -146,9 +145,6 @@ class Application extends App implements IBootstrap {
 				// the full prefixed filename, not just the entry name.
 				\OCP\Util::addScript(Application::APP_ID, Application::APP_ID . '-contacts-integration');
 			}
-			if (str_contains($uri, '/apps/files')) {
-				\OCP\Util::addScript(Application::APP_ID, Application::APP_ID . '-files-integration');
-			}
 		} catch (\Throwable) {
 			// Non-fatal.
 		}
@@ -165,9 +161,6 @@ class Application extends App implements IBootstrap {
 						$uri = \OC::$server->getRequest()->getRequestUri();
 						if (str_contains($uri, '/apps/contacts')) {
 							\OCP\Util::addScript(Application::APP_ID, Application::APP_ID . '-contacts-integration');
-						}
-						if (str_contains($uri, '/apps/files')) {
-							\OCP\Util::addScript(Application::APP_ID, Application::APP_ID . '-files-integration');
 						}
 					} catch (\Throwable) {}
 				}

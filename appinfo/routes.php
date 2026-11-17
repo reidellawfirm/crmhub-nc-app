@@ -12,15 +12,7 @@ return [
 
 		// Main page
 		['name' => 'page#index', 'url' => '/', 'verb' => 'GET'],
-		['name' => 'page#hugo', 'url' => '/hugo', 'verb' => 'GET'],
 
-		// --- Hugo Preview API Routes ---
-		['name' => 'hugoApi#projects', 'url' => '/api/hugo/projects', 'verb' => 'GET'],
-		['name' => 'hugoApi#saveProject', 'url' => '/api/hugo/projects', 'verb' => 'POST'],
-		['name' => 'hugoApi#getProject', 'url' => '/api/hugo/projects/{id}', 'verb' => 'GET'],
-		['name' => 'hugoApi#deleteProject', 'url' => '/api/hugo/projects/{id}', 'verb' => 'DELETE'],
-		['name' => 'hugoApi#buildProject', 'url' => '/api/hugo/projects/{id}/build', 'verb' => 'POST'],
-		['name' => 'hugoApi#buildAllProjects', 'url' => '/api/hugo/build/all', 'verb' => 'POST'],
 		['name' => 'config#setConfig', 'url' => '/config', 'verb' => 'PUT'],
 		['name' => 'config#rotateToken', 'url' => '/config/rotate-token', 'verb' => 'POST'],
 

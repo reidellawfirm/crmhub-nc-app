@@ -36,15 +36,4 @@ class PageController extends Controller {
 		return new TemplateResponse(Application::APP_ID, 'main');
 	}
 
-	#[NoAdminRequired]
-	#[NoCSRFRequired]
-	public function hugo(): TemplateResponse {
-		Util::addScript(Application::APP_ID, Application::APP_ID . '-main');
-
-		$user = $this->userSession->getUser();
-		$this->initialState->provideInitialState('current_user_id', $user?->getUID());
-		$this->initialState->provideInitialState('start_route', '/hugo/projects');
-
-		return new TemplateResponse(Application::APP_ID, 'main');
-	}
 }
